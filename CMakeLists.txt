@@ -34,6 +34,7 @@ else()
 endif()
 
 add_library(ap4 STATIC ${AP4_SOURCES})
+add_library(ap4_shared SHARED ${AP4_SOURCES})
 
 # Includes
 include_directories(
