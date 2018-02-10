@@ -266,7 +266,7 @@ def Bento4Command(options, name, *args, **kwargs):
 
     cmd += args
     if options.debug:
-        print 'COMMAND: ', cmd
+        print 'COMMAND: ', " ".join(cmd), cmd
     try:
         try:
             return check_output(cmd)
@@ -302,6 +302,9 @@ def Mp4Encrypt(options, input_filename, output_filename, *args, **kwargs):
 def Mp42Hls(options, input_filename, *args, **kwargs):
     return Bento4Command(options, 'mp42hls', input_filename, *args, **kwargs)
 
+def Mp4IframIndex(options, input_filename, *args, **kwargs):
+    return Bento4Command(options, 'mp4iframeindex', input_filename, *args, **kwargs)
+    
 class Mp4Atom:
     def __init__(self, type, size, position):
         self.type     = type
@@ -445,6 +448,8 @@ class Mp4Track:
         # compute the max segment bitrates
         if len(self.segment_bitrates) > 1:
             self.max_segment_bitrate = max(self.segment_bitrates[:-1])
+        else:
+            self.max_segment_bitrate = self.average_segment_bitrate
 
         # compute the bandwidth
         if options.min_buffer_time == 0.0:
@@ -651,6 +656,7 @@ class Mp4File:
 class MediaSource:
     def __init__(self, name):
         self.name = name
+        self.track_key_infos = {}
         if name.startswith('[') and ']' in name:
             try:
                 params = name[1:name.find(']')]
@@ -690,7 +696,7 @@ def ComputeBandwidth(buffer_time, sizes, durations):
             accu_size     += sizes[j]
             accu_duration += durations[j]
             max_avail = buffer_size+accu_duration*bandwidth/8.0
-            if accu_size > max_avail:
+            if accu_size > max_avail and accu_duration != 0:
                 bandwidth = 8.0*(accu_size-buffer_size)/accu_duration
                 break
     return int(bandwidth)

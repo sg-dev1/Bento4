@@ -82,7 +82,7 @@ PrintUsageAndExit()
 {
     fprintf(stderr, 
             BANNER 
-            "\n\nusage: mp4mux [options] --track [<type>:]<input>[#<params] [--track [<type>:]<input>[#<params] ...] <output>\n"
+            "\n\nusage: mp4mux [options] --track [<type>:]<input>[#<params>] [--track [<type>:]<input>[#<params>] ...] <output>\n"
             "\n"
             "  <params>, when specified, are expressd as a comma-separated list of\n"
             "  one or more <name>=<value> parameters\n"
@@ -92,6 +92,7 @@ PrintUsageAndExit()
             "  h265: H265/HEVC NAL units\n"
             "    optional params:\n"
             "      frame_rate: floating point number in frames per second (default=24.0)\n"
+            "      format: hev1 or hvc1 (default) for HEVC tracks\n"
             "  aac:  AAC in ADTS format\n"
             "  mp4:  MP4 track(s) from an MP4 file\n"
             "    optional params:\n"
@@ -387,6 +388,7 @@ AddH264Track(AP4_Movie&            movie,
             double frame_rate = atof(parameters[i].m_Value.GetChars());
             if (frame_rate == 0.0) {
                 fprintf(stderr, "ERROR: invalid video frame rate %s\n", parameters[i].m_Value.GetChars());
+                input->Release();
                 return;
             }
             video_frame_rate = (unsigned int)(1000.0*frame_rate);
@@ -585,7 +587,8 @@ AddH265Track(AP4_Movie&            movie,
 {
     unsigned int video_width = 0;
     unsigned int video_height = 0;
-
+    AP4_UI32     format = AP4_SAMPLE_FORMAT_HVC1;
+    
     AP4_ByteStream* input;
     AP4_Result result = AP4_FileByteStream::Create(input_name, AP4_FileByteStream::STREAM_MODE_READ, input);
     if (AP4_FAILED(result)) {
@@ -600,9 +603,16 @@ AddH265Track(AP4_Movie&            movie,
             double frame_rate = atof(parameters[i].m_Value.GetChars());
             if (frame_rate == 0.0) {
                 fprintf(stderr, "ERROR: invalid video frame rate %s\n", parameters[i].m_Value.GetChars());
+                input->Release();
                 return;
             }
             video_frame_rate = (unsigned int)(1000.0*frame_rate);
+        } else if (parameters[i].m_Name == "format") {
+            if (parameters[i].m_Value == "hev1") {
+                format = AP4_SAMPLE_FORMAT_HEV1;
+            } else if (parameters[i].m_Value == "hvc1") {
+                format = AP4_SAMPLE_FORMAT_HVC1;
+            }
         }
     }
     
@@ -764,8 +774,9 @@ AddH265Track(AP4_Movie&            movie,
     }
     
     // setup the video the sample descripton
+    AP4_UI08 parameters_completeness = (format == AP4_SAMPLE_FORMAT_HVC1 ? 1 : 0);
     AP4_HevcSampleDescription* sample_description =
-        new AP4_HevcSampleDescription(AP4_SAMPLE_FORMAT_HEV1,
+        new AP4_HevcSampleDescription(format,
                                       video_width,
                                       video_height,
                                       24,
@@ -787,8 +798,11 @@ AddH265Track(AP4_Movie&            movie,
                                       temporal_id_nested,
                                       nalu_length_size,
                                       vps_array,
+                                      parameters_completeness,
                                       sps_array,
-                                      pps_array);
+                                      parameters_completeness,
+                                      pps_array,
+                                      parameters_completeness);
     
     sample_table->AddSampleDescription(sample_description);
     

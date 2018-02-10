@@ -932,19 +932,19 @@ PackedAudioWriter::WriteSample(AP4_Sample&            sample,
         return AP4_ERROR_INVALID_FORMAT;
     }
     if (sample_description->GetFormat() == AP4_SAMPLE_FORMAT_MP4A) {
-        AP4_MpegAudioSampleDescription* audio_desc = AP4_DYNAMIC_CAST(AP4_MpegAudioSampleDescription, sample_description);
+        AP4_MpegAudioSampleDescription* mpeg_audio_desc = AP4_DYNAMIC_CAST(AP4_MpegAudioSampleDescription, sample_description);
 
-        if (audio_desc == NULL) return AP4_ERROR_NOT_SUPPORTED;
-        if (audio_desc->GetMpeg4AudioObjectType() != AP4_MPEG4_AUDIO_OBJECT_TYPE_AAC_LC   &&
-            audio_desc->GetMpeg4AudioObjectType() != AP4_MPEG4_AUDIO_OBJECT_TYPE_AAC_MAIN &&
-            audio_desc->GetMpeg4AudioObjectType() != AP4_MPEG4_AUDIO_OBJECT_TYPE_SBR      &&
-            audio_desc->GetMpeg4AudioObjectType() != AP4_MPEG4_AUDIO_OBJECT_TYPE_PS) {
+        if (mpeg_audio_desc == NULL) return AP4_ERROR_NOT_SUPPORTED;
+        if (mpeg_audio_desc->GetMpeg4AudioObjectType() != AP4_MPEG4_AUDIO_OBJECT_TYPE_AAC_LC   &&
+            mpeg_audio_desc->GetMpeg4AudioObjectType() != AP4_MPEG4_AUDIO_OBJECT_TYPE_AAC_MAIN &&
+            mpeg_audio_desc->GetMpeg4AudioObjectType() != AP4_MPEG4_AUDIO_OBJECT_TYPE_SBR      &&
+            mpeg_audio_desc->GetMpeg4AudioObjectType() != AP4_MPEG4_AUDIO_OBJECT_TYPE_PS) {
             return AP4_ERROR_NOT_SUPPORTED;
         }
 
-        unsigned int sample_rate   = audio_desc->GetSampleRate();
-        unsigned int channel_count = audio_desc->GetChannelCount();
-        const AP4_DataBuffer& dsi  = audio_desc->GetDecoderInfo();
+        unsigned int sample_rate   = mpeg_audio_desc->GetSampleRate();
+        unsigned int channel_count = mpeg_audio_desc->GetChannelCount();
+        const AP4_DataBuffer& dsi  = mpeg_audio_desc->GetDecoderInfo();
         if (dsi.GetDataSize()) {
             AP4_Mp4AudioDecoderConfig dec_config;
             AP4_Result result = dec_config.Parse(dsi.GetData(), dsi.GetDataSize());
@@ -1176,7 +1176,7 @@ WriteSamples(AP4_Mpeg2TsWriter*               ts_writer,
                 if (Options.encryption_mode == ENCRYPTION_MODE_SAMPLE_AES) {
                     AP4_DataBuffer descriptor;
                     if (audio_track) {
-                        AP4_Result result = MakeSampleAesAudioDescriptor(descriptor, audio_track->GetSampleDescription(0), audio_sample_data);
+                        result = MakeSampleAesAudioDescriptor(descriptor, audio_track->GetSampleDescription(0), audio_sample_data);
                         if (AP4_SUCCEEDED(result) && descriptor.GetDataSize()) {
                             audio_stream->SetDescriptor(descriptor.GetData(), descriptor.GetDataSize());
                         } else {
@@ -1185,7 +1185,7 @@ WriteSamples(AP4_Mpeg2TsWriter*               ts_writer,
                         }
                     }
                     if (video_track) {
-                        AP4_Result result = MakeSampleAesVideoDescriptor(descriptor);
+                        result = MakeSampleAesVideoDescriptor(descriptor);
                         if (AP4_SUCCEEDED(result) && descriptor.GetDataSize()) {
                             video_stream->SetDescriptor(descriptor.GetData(), descriptor.GetDataSize());
                         } else {
@@ -1508,11 +1508,6 @@ WriteSamples(AP4_Mpeg2TsWriter*               ts_writer,
     }
     
     if (Options.verbose) {
-        if (video_track) {
-            segment_duration = video_ts - last_ts;
-        } else {
-            segment_duration = audio_ts - last_ts;
-        }
         printf("Conversion complete, total duration=%.2f secs\n", total_duration);
     }
     
@@ -2041,7 +2036,9 @@ main(int argc, char** argv)
             if (sample_description->GetFormat() == AP4_SAMPLE_FORMAT_AVC1 ||
                 sample_description->GetFormat() == AP4_SAMPLE_FORMAT_AVC2 ||
                 sample_description->GetFormat() == AP4_SAMPLE_FORMAT_AVC3 ||
-                sample_description->GetFormat() == AP4_SAMPLE_FORMAT_AVC4) {
+                sample_description->GetFormat() == AP4_SAMPLE_FORMAT_AVC4 ||
+                sample_description->GetFormat() == AP4_SAMPLE_FORMAT_DVAV ||
+                sample_description->GetFormat() == AP4_SAMPLE_FORMAT_DVA1) {
                 if (Options.encryption_mode == ENCRYPTION_MODE_SAMPLE_AES) {
                     stream_type = AP4_MPEG2_STREAM_TYPE_SAMPLE_AES_AVC;
                     AP4_AvcSampleDescription* avc_desc = AP4_DYNAMIC_CAST(AP4_AvcSampleDescription, sample_description);
@@ -2054,7 +2051,9 @@ main(int argc, char** argv)
                     stream_type = AP4_MPEG2_STREAM_TYPE_AVC;
                 }
             } else if (sample_description->GetFormat() == AP4_SAMPLE_FORMAT_HEV1 ||
-                       sample_description->GetFormat() == AP4_SAMPLE_FORMAT_HVC1) {
+                       sample_description->GetFormat() == AP4_SAMPLE_FORMAT_HVC1 ||
+                       sample_description->GetFormat() == AP4_SAMPLE_FORMAT_DVHE ||
+                       sample_description->GetFormat() == AP4_SAMPLE_FORMAT_DVH1) {
                 stream_type = AP4_MPEG2_STREAM_TYPE_HEVC;
             } else {
                 fprintf(stderr, "ERROR: video codec not supported\n");
